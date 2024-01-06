@@ -1,0 +1,114 @@
+// DevilRP Plugins
+
+config = {
+  "Nation" : "España",
+  "NID" : "Identificador Nacional",
+  "NDL" : "Carnet de Conducir",
+  "City_Name" : "Ciudad Autónoma de DevilRP",
+  "WebhookURL_VehicleDMG": "https://discord.com/api/webhooks/973348300646391888/ptmU3q3ibiF7d9EuLxTuNYkbYp_jlZUgUjJTmMaGBJA8l7xsaC_yCA_0IseCL2tT6Xpp"
+};
+
+// TRANSLATION
+msg = {
+  "NoPlayerLooking_NDLCreate": "Especifica a quien hay que crearle el carnet | USO -> /crearcarnet DNI",
+  "PlayerExists_NDLCreate": "Este Ciudadano ya tiene carnet, puedes verlo con /comprobarcarnet mirandolo",
+  "Creating_NDLCreate" : "Generando....",
+  "Completed_NDLCreate" : "Completado",
+  "V_Damaged" : "ha sido golpeado por:"
+};
+
+// Create TABLE and FUNCTIONS on DB 
+// event onLoad(){
+
+//     // database.nonQuery("CREATE TABLE IF NOT EXISTS `players` ( `sid` varchar(20) NOT NULL, `name` varchar(50) DEFAULT NULL, `nif` varchar(9) DEFAULT NULL, `phone` int(11) DEFAULT NULL, `ndl` varchar(9) DEFAULT 'nulo', `pts` int DEFAULT NULL, `nation` varchar(50) DEFAULT NULL)");
+//     // database.nonQuery("CREATE FUNCTION IF NOT EXISTS generar_dni() RETURNS VARCHAR(9) BEGIN DECLARE letras VARCHAR(23) DEFAULT 'TRWAGMYFPDXBNJZSQVHLCKE'; DECLARE dni CHAR(9); DECLARE i INT DEFAULT 1; DECLARE num INT; WHILE i <= 8 DO SET num = FLOOR(RAND() * 10); SET dni = CONCAT(dni, num); SET i = i + 1; END WHILE; SET num = FLOOR(RAND() * 23); SET dni = CONCAT(dni, SUBSTRING(letras, num + 1, 1)); RETURN dni;");
+//     database.nonQuery("DROP FUNCTION IF EXISTS `generar_carnet`; CREATE FUNCTION generar_carnet() RETURNS VARCHAR(9) BEGIN DECLARE letras VARCHAR(23) DEFAULT 'TRWAGMYFPDXBNJZSQVHLCKE'; DECLARE carnet CHAR(9) DEFAULT ''; DECLARE i INT DEFAULT 1; DECLARE num INT; WHILE i <= 8 DO SET num = FLOOR(RAND() * 10); SET carnet = CONCAT(carnet, num); SET i = i + 1; END WHILE; SET num = FLOOR(RAND() * 23); SET carnet = CONCAT(carnet, SUBSTRING(letras, num+1, 1)); RETURN carnet; END");
+// }
+// Insert New Player on DB
+event onPlayerJoined(player){
+  Check = database.firstRow("SELECT sid FROM players WHERE sid = @p0;", player.id);
+  if(Check.count == 0){
+    database.nonQuery("INSERT INTO players (sid, name, nif, nation) VALUES (@p0, @p1, (SELECT generar_dni()), @p2)", player.id, player.name,config["Nation"]);
+    }
+
+// Update player name on DB
+
+    Check2 = database.firstRow("SELECT name FROM players WHERE name = @p0;", player.name);
+    if(Check2.count == 0){
+    database.nonQuery("UPDATE players SET name = @p0 WHERE sid = @p1", player.name, player.id);
+    }
+}
+
+// Look NIF From Other Players
+
+event onPlayerGestured(player,gesture){
+
+    if(gesture == "POINT"){
+        target = player.look.getPlayer();
+        if(target.equipment.item.id == 29800){
+          temp = database.firstRow("SELECT * FROM players WHERE sid = @p0", target.id);
+          player.effects.sendUI(47000, 1);
+          player.effects.sendUIText(1, "CNation",temp[6]);
+          player.effects.sendUIText(1, "CTlf:",temp[2]);
+          player.effects.sendUIText(1, "CNº:",temp[1]);
+          player.effects.sendUIText(1, "CCity",config["City_Name"]);
+          player.effects.sendUIText(1, "CTittle",config["NID"]);
+          EffectManagerExtended.setImage(player.id, 1, "Image", target.steamProfile.avatarUrl);
+
+        }
+        if(target.equipment.item.id == 1127){
+          temp = database.firstRow("SELECT * FROM players WHERE sid = @p0", target.id);
+          player.effects.sendUI(47001, 2);
+          player.effects.sendUIText(2, "CNation",temp[6]);
+          player.effects.sendUIText(2, "CTlf:",temp[4]);
+          player.effects.sendUIText(2, "CNº:",temp[1]);
+          player.effects.sendUIText(2, "CCity",config["City_Name"]);
+          player.effects.sendUIText(2, "CTittle",config["NDL"]);
+          player.effects.sendUIText(2, "CTittle (1)",temp[5]);
+          EffectManagerExtended.setImage(player.id, 2, "Image", target.player.steamProfile.avatarUrl);
+        }
+  }
+}
+
+// Driving License
+
+command crearcarnet(DNI){
+  permission = "DGT.CrearCarnet";
+  allowCaller = "player";
+  execute(){
+    if(arguments.count < 1){
+      player.message(msg["NoPlayerLooking_NDLCreate"], "red","");
+      return;
+    }
+    Check = database.firstRow("SELECT ndl FROM players WHERE nif = @p0;", DNI);
+    if(toString(Check) == "nulo"){
+      database.nonQuery("INSERT INTO players (ndl, pts) VALUES ((SELECT generar_carnet()),15) WHERE nif = @p0", DNI);
+      player.message(msg["Creating_NDLCreate"],"red","");
+      player.message(msg["Completed_NDLCreate"],"green","");
+    }
+    else{
+      player.message(msg["PlayerExists_NDLCreate"], "red", "https://i.imgur.com/DpxO3nT.png");
+    }
+  }
+}
+command dni(){
+  allowCaller = "player";
+  execute(){
+      tmp_dni = database.firstRow("SELECT * FROM players WHERE sid = @p0",player.id);
+      print(tmp_dni[2]);
+      player.message(tmp_dni[2]);
+  }
+}
+command teste(){
+   permission = "Test.Open";
+   execute(){
+    effectManager.sendUI(47000, 2, player.id, "DevilRP City","Faysuca Moro","Faysuca Moro","Faysuca Moro");
+   }
+}
+
+command teste1(){
+   permission = "Test.Open";
+   execute(){
+    effectManager.sendUI(47001, 1, player.id, "Tetas", "Mamalongas");
+   }
+}
